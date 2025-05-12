@@ -1,15 +1,24 @@
 <?php
 header('Content-Type: application/json');
+header('Access-Control-Allow-Methods: POST, GET, OPTIONS'); // Permite POST
+header('Access-Control-Allow-Origin: *'); // Permite CORS
 
-require 'guardar.php'; // Reutilizamos el código de guardar
+// Conexión a SQLite
+$db = new PDO('sqlite:' . __DIR__ . '/urls.db');
 
+// Manejo de CORS para peticiones OPTIONS
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    exit(0);
+}
+
+// Tu lógica original aquí
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'POST') {
-    // El contenido POST ya está manejado por guardar.php
+    $input = json_decode(file_get_contents('php://input'), true);
+    // ... resto de tu código POST
 } elseif ($method === 'GET') {
-    // El contenido GET ya está manejado por index.php
-    require 'index.php';
+    // ... tu código GET
 } else {
     http_response_code(405);
     echo json_encode(['error' => 'Método no permitido']);

@@ -1,0 +1,5 @@
+[phases.setup]
+nixPkgs = ["php", "sqlite"]  # Solo instala PHP y SQLite
+
+[start]
+cmd = "php -S 0.0.0.0:$PORT -t ."  # Usa el puerto dinámico ($PORT) que Railway asigna (8080 en tu caso)
