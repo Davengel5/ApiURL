@@ -1,5 +1,5 @@
 RewriteEngine On
-RewriteBase /AcortadorURL/
+RewriteBase /
 
 # Redirección para URLs cortas (ej: /AbCd12)
 RewriteCond %{REQUEST_FILENAME} !-f
