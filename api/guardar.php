@@ -2,16 +2,27 @@
 header('Content-Type: application/json');
 error_reporting(0); // Desactivar mensajes de error en producción
 
-// 1. Conexión segura a la base de datos
+// 1. Conexión segura a la base de datos en Railway
 try {
-    $dbPath = __DIR__.'/../urls.db';
+    // Railway monta el volumen persistente en /data
+    $dbPath = '/data/urls.db';
+    
+    // Verificar si la base de datos existe, si no, crearla
+    if (!file_exists($dbPath)) {
+        file_put_contents($dbPath, ''); // Crear archivo vacío
+        chmod($dbPath, 0666); // Dar permisos de lectura/escritura
+    }
+    
     $db = new PDO('sqlite:'.$dbPath);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
-    // Verificar permisos de escritura
-    if (!is_writable($dbPath)) {
-        throw new PDOException("La base de datos no tiene permisos de escritura");
-    }
+    // Crear tabla si no existe
+    $db->exec("CREATE TABLE IF NOT EXISTS urls (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT UNIQUE,
+        url TEXT
+    )");
+    
 } catch (PDOException $e) {
     http_response_code(500);
     echo json_encode(['error' => 'Error de conexión a BD: '.$e->getMessage()]);
@@ -48,11 +59,8 @@ try {
     $stmt = $db->prepare("INSERT INTO urls (slug, url) VALUES (?, ?)");
     $stmt->execute([$slug, $input['url']]);
     
-    // Construir URL corta dinámica
-    $protocol = isset($_SERVER['HTTPS']) ? 'https://' : 'http://';
-    $host = $_SERVER['HTTP_HOST'];
-    $basePath = rtrim(dirname($_SERVER['PHP_SELF']), '/');
-    $shortUrl = "$protocol$host$basePath/$slug";
+    // Construir URL corta para Railway
+    $shortUrl = "https://{$_SERVER['HTTP_HOST']}/$slug";
     
     $db->commit();
     
