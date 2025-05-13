@@ -7,9 +7,9 @@ header("Access-Control-Allow-Methods: POST, OPTIONS");
 function getDatabaseConnection() {
     try {
         $db = new PDO(
-            "mysql:host=".getenv('DB_HOST').";port=".getenv('DB_PORT').";dbname=".getenv('DB_DATABASE'),
-            getenv('DB_USER'),
-            getenv('DB_PASSWORD'),
+            "mysql:host=".getenv('MYSQLHOST').";port=".getenv('MYSQLPORT').";dbname=".getenv('MYSQLDATABASE'),
+            getenv('MYSQLUSER'),
+            getenv('MYSQLPASSWORD'),
             [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
