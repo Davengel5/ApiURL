@@ -9,11 +9,7 @@
     //    echo "No enviaste ninguna URL.";
     //    exit;
     //}
-<<<<<<< HEAD
-    //$datos = json_decode(file_get_contents("php://input"), true);
-=======
     $datos = json_decode(file_get_contents("php://input"), true);
->>>>>>> 2efd379949782690c887148094471087fd715a05
 
     if (!isset($datos['url'])) {
         echo "No enviaste ninguna URL.";
