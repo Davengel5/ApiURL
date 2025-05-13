@@ -14,7 +14,7 @@ try {
         exit;
     }
     
-    $db = new PDO('sqlite:'.$dbPath);
+    $db = new PDO('mysql:'.$dbPath);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     http_response_code(500);
