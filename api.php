@@ -1,70 +1,51 @@
 <?php
 header('Content-Type: application/json');
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
 
+$pdo = new PDO('mysql:host=mysql.railway.internal;dbname=railway;charset=utf8mb4', 'root', 'PmbYEyrQWIIItorYmqhWMsuaRKHACDcc');
+$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $method = $_SERVER['REQUEST_METHOD'];
 
-// Manejo de solicitudes OPTIONS para CORS
-if ($method === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
-
-try {
-    if ($method === 'POST') {
-        // Leer el input JSON
-        $input = json_decode(file_get_contents('php://input'), true);
-        
-        if (!$input || !isset($input['url'])) {
-            http_response_code(400);
-            echo json_encode([
-                'status' => 'error',
-                'message' => 'Debe proporcionar una URL válida en formato JSON',
-                'example' => ['url' => 'https://ejemplo.com']
-            ]);
-            exit;
-        }
-
-        // Validar URL
-        if (!filter_var($input['url'], FILTER_VALIDATE_URL)) {
-            http_response_code(400);
-            echo json_encode([
-                'status' => 'error',
-                'message' => 'URL no válida',
-                'received' => $input['url']
-            ]);
-            exit;
-        }
-
-        // Procesar con guardar.php
-        require __DIR__.'/guardar.php';
-        
-    } elseif ($method === 'GET') {
-        // Manejo de redirecciones (index.php ya maneja esto)
-        require __DIR__.'/index.php';
-        
-    } else {
-        http_response_code(405);
-        echo json_encode([
-            'status' => 'error',
-            'message' => 'Método no permitido',
-            'allowed_methods' => ['GET', 'POST']
-        ]);
+if ($method === 'POST') {
+    // Acortar URL
+    $data = json_decode(file_get_contents("php://input"), true);
+    
+    if (!isset($data['url']) || empty($data['url'])) {
+        http_response_code(400); // Bad Request
+        echo json_encode(['error' => 'No se proporcionó una URL.']);
+        exit;
     }
-    
-} catch (Exception $e) {
-    http_response_code(500);
+
+    $url = $data['url'];
+    $slug = substr(md5(uniqid(rand(), true)), 0, 6);
+
+    $stmt = $pdo->prepare("INSERT INTO urls (slug, url) VALUES (?, ?)");
+    $stmt->execute([$slug, $url]);
+
+    $host = $_SERVER['HTTP_HOST'];
+    $path = rtrim(dirname($_SERVER['PHP_SELF']), '/');
+    $shortUrl = "http://$host$path/$slug";
+
     echo json_encode([
-        'status' => 'error',
-        'message' => 'Error interno del servidor',
-        'details' => $e->getMessage()
+        "slug" => $slug,
+        "url" => $url,
+        "short_url" => $shortUrl
     ]);
-    
-    // Log del error (útil para depuración)
-    file_put_contents(__DIR__.'/api_errors.log', 
-        date('[Y-m-d H:i:s]')." Error: ".$e->getMessage()."\n".$e->getTraceAsString()."\n\n", 
-        FILE_APPEND);
+
+} elseif ($method === 'GET') {
+    // Obtener URL por slug
+    $slug = $_GET['slug'] ?? '';
+
+    $stmt = $pdo->prepare("SELECT url FROM urls WHERE slug = ?");
+    $stmt->execute([$slug]);
+    $resultado = $stmt->fetch();
+
+    if ($resultado) {
+        echo json_encode(["slug" => $slug, "url" => $resultado['url']]);
+    } else {
+        http_response_code(404); // Not Found
+        echo json_encode(['error' => 'Slug no encontrada.']);
+    }
+} else {
+    http_response_code(405); // Method Not Allowed
+    echo json_encode(['error' => 'Método no permitido.']);
 }
-?>
