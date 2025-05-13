@@ -1,5 +1,8 @@
 {
   "build": {
-    "builder": "nixpacks"
+    "builder": "nixpacks",
+    "config": {
+      "startCommand": "./start.sh"
+    }
   }
 }
