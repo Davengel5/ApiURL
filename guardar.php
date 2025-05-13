@@ -1,61 +1,49 @@
 <?php
 header('Content-Type: application/json');
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Methods: POST");
 
-// 1. Conexión a la base de datos con manejo de errores mejorado
+// 1. Configuración de logs para debug
+file_put_contents('/data/debug.log', "\n[" . date('Y-m-d H:i:s') . "] Inicio de guardar.php\n", FILE_APPEND);
+
+// 2. Conexión a BD con manejo robusto de errores
+$dbPath = '/data/urls.db';
+file_put_contents('/data/debug.log', "Ruta de BD: $dbPath\n", FILE_APPEND);
+
 try {
-    $dbPath = '/data/urls.db'; // Ruta persistente en Railway
-    
-    // Verificar/Crear base de datos si no existe
-    if (!file_exists($dbPath)) {
-        file_put_contents($dbPath, '');
-        chmod($dbPath, 0666);
+    // Verificar permisos del archivo
+    if (file_exists($dbPath)) {
+        file_put_contents('/data/debug.log', "Permisos actuales: " . decoct(fileperms($dbPath)) . "\n", FILE_APPEND);
+        chmod($dbPath, 0666); // Asegurar permisos de escritura
     }
-    
-    $db = new PDO('sqlite:'.$dbPath);
+
+    $db = new PDO("sqlite:$dbPath");
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
-    // Crear tabla con índices optimizados
+    // Crear tabla si no existe (con manejo de concurrencia)
     $db->exec("CREATE TABLE IF NOT EXISTS urls (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         slug TEXT UNIQUE,
         url TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
-    $db->exec("CREATE INDEX IF NOT EXISTS idx_slug ON urls(slug)");
 
 } catch (PDOException $e) {
+    file_put_contents('/data/error.log', "Error de conexión: " . $e->getMessage() . "\n", FILE_APPEND);
     http_response_code(500);
-    echo json_encode([
-        'error' => 'Database error',
-        'details' => $e->getMessage()
-    ]);
+    echo json_encode(['error' => 'Error de conexión a la base de datos']);
     exit;
 }
 
-// 2. Manejar preflight OPTIONS para CORS
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
-
-// 3. Validar método HTTP
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(['error' => 'Método no permitido']);
-    exit;
-}
-
-// 4. Leer y validar input JSON
+// 3. Procesar input JSON (compatible con tu app Android)
 $input = json_decode(file_get_contents('php://input'), true);
 
-if (json_last_error() !== JSON_ERROR_NONE) {
-    http_response_code(400);
-    echo json_encode(['error' => 'JSON inválido']);
-    exit;
+// Fallback para datos de formulario (por si acaso)
+if (empty($input) && !empty($_POST)) {
+    $input = $_POST;
 }
+
+file_put_contents('/data/debug.log', "Datos recibidos: " . print_r($input, true) . "\n", FILE_APPEND);
 
 if (empty($input['url'])) {
     http_response_code(400);
@@ -63,17 +51,15 @@ if (empty($input['url'])) {
     exit;
 }
 
-// 5. Validar formato de URL
-$url = filter_var($input['url'], FILTER_VALIDATE_URL);
-
-if (!$url) {
+// 4. Validación de URL
+if (!filter_var($input['url'], FILTER_VALIDATE_URL)) {
     http_response_code(400);
     echo json_encode(['error' => 'URL no válida']);
     exit;
 }
 
-// 6. Generar slug único (3 intentos)
-$maxAttempts = 3;
+// 5. Generación de slug único
+$maxAttempts = 5;
 $attempt = 0;
 $slug = null;
 
@@ -86,39 +72,35 @@ do {
 
 if ($attempt >= $maxAttempts) {
     http_response_code(500);
-    echo json_encode(['error' => 'No se pudo generar URL única']);
+    echo json_encode(['error' => 'No se pudo generar un slug único']);
     exit;
 }
 
-// 7. Guardar en base de datos con transacción
+// 6. Transacción para insertar
 try {
     $db->beginTransaction();
     
     $stmt = $db->prepare("INSERT INTO urls (slug, url) VALUES (?, ?)");
-    $stmt->execute([$slug, $url]);
+    $stmt->execute([$slug, $input['url']]);
     
-    $shortUrl = "https://{$_SERVER['HTTP_HOST']}/$slug";
+    $shortUrl = "https://" . $_SERVER['HTTP_HOST'] . "/" . $slug;
     
     $db->commit();
     
-    // 8. Respuesta exitosa
+    // 7. Respuesta compatible con tu app Android
     echo json_encode([
-        'success' => true,
-        'short_url' => $shortUrl,  // Campo que espera la app Android
+        'short_url' => $shortUrl,  // Campo que tu app espera
         'slug' => $slug,
-        'original_url' => $url,
-        'info' => 'URL acortada creada'
+        'original_url' => $input['url'],
+        'status' => 'success'      // Compatibilidad con tus pruebas anteriores
     ]);
     
+    file_put_contents('/data/debug.log', "URL acortada creada: $shortUrl\n", FILE_APPEND);
+
 } catch (PDOException $e) {
     $db->rollBack();
+    file_put_contents('/data/error.log', "Error al guardar: " . $e->getMessage() . "\n", FILE_APPEND);
     http_response_code(500);
-    echo json_encode([
-        'error' => 'Error al guardar URL',
-        'details' => $e->getMessage()
-    ]);
-    
-    // Log del error (útil en Railway)
-    file_put_contents('php://stderr', "DB Error: ".$e->getMessage()."\n");
+    echo json_encode(['error' => 'Error al guardar la URL']);
 }
 ?>
