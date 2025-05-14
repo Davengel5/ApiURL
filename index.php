@@ -33,7 +33,9 @@
 	//}
 	//
 	
-	$path = trim(parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH), "/");
+	//$path = trim(parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH), "/");
+	$parsed = parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH);
+	$path = $parsed !== null ? trim($parsed, "/") : "";
 
 if ($path === "" || $path === "index.php") {
     echo "Bienvenido. Usa una URL corta para redirigir.";
