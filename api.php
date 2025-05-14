@@ -6,21 +6,20 @@ $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'POST') {
+    // Acortar URL
     $data = json_decode(file_get_contents("php://input"), true);
     
     if (!isset($data['url']) || empty($data['url'])) {
-        http_response_code(400);
+        http_response_code(400); // Bad Request
         echo json_encode(['error' => 'No se proporcionó una URL.']);
         exit;
     }
 
     $url = $data['url'];
-    $idUsuario = $data['idUsuario'] ?? null; // Nuevo campo
     $slug = substr(md5(uniqid(rand(), true)), 0, 6);
 
-    // Modifica la consulta SQL
-    $stmt = $pdo->prepare("INSERT INTO urls (slug, url, idUsuario) VALUES (?, ?, ?)");
-    $stmt->execute([$slug, $url, $idUsuario]);
+    $stmt = $pdo->prepare("INSERT INTO urls (slug, url) VALUES (?, ?)");
+    $stmt->execute([$slug, $url]);
 
     $host = $_SERVER['HTTP_HOST'];
     $path = rtrim(dirname($_SERVER['PHP_SELF']), '/');
