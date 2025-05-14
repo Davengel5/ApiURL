@@ -1,64 +1,38 @@
 <?php
+// 1. Conexión a la base de datos (mantén tus credenciales)
+$pdo = new PDO('mysql:host=mysql.railway.internal;dbname=railway;charset=utf8mb4', 'root', 'PmbYEyrQWIIItorYmqhWMsuaRKHACDcc');
+$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-// 1. Conectamos a la base de datos
-	$pdo = new PDO('mysql:host=mysql.railway.internal;dbname=railway;charset=utf8mb4', 'root', 'fvnJSMGrEiLaBGmOKQdhpAQgamPtRVat');
-	$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+// 2. Obtener el slug de manera confiable
+$requestUri = $_SERVER['REQUEST_URI'] ?? '';
+$slug = '';
 
+// Limpieza especial para Railway
+if (strpos($requestUri, '//') === 0) {
+    $slug = substr($requestUri, 2); // Quita las dos barras iniciales
+} else {
+    $slug = ltrim($requestUri, '/');
+}
 
-	echo "<pre>";
-echo "REQUEST_URI: " . ($_SERVER['REQUEST_URI'] ?? 'NULL') . "\n";
-echo "PATH: " . ($path ?? 'NULL') . "\n";
-echo "HTTP_HOST: " . ($_SERVER['HTTP_HOST'] ?? 'NULL') . "\n";
-echo "SCRIPT_NAME: " . ($_SERVER['SCRIPT_NAME'] ?? 'NULL') . "\n";
-echo "</pre>";
-exit;
-// 2. Obtenemos el slug que está en la URL
-	//$slug = ltrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/'); 
+// Limpiar parámetros de query si existen
+$slug = strtok($slug, '?');
 
-//2.5
-	//if($slug === '')
-	//{
-	//	echo "Bienvenido al acortador. Proporciona una URL."
-	//	exit;
-	//}	
-
-
-// 3. Buscamos en la base de datos
-	//$stmt = $pdo->prepare("SELECT url FROM urls WHERE slug = ?");
-	//$stmt->execute([$slug]);
-	
-	//if ($row = $stmt->fetch()) 
-	//{
-		
-	// 4. Si existe, redirigimos
-    	//	header('Location: ' . $row['url']);
-	//	exit;
-
-	//} else {
-		
-	// 5. Si no existe, mostramos error
-	//http_response_code(404);
-    	//echo "URL no encontrada.";
-	//}
-	//
-	
-	//$path = trim(parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH), "/");
-	$parsed = parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH);
-	$path = $parsed !== null ? trim($parsed, "/") : "";
-
-if ($path === "" || $path === "index.php") {
+// 3. Mostrar mensaje si no hay slug
+if (empty($slug) || $slug === 'index.php') {
     echo "Bienvenido. Usa una URL corta para redirigir.";
     exit;
 }
 
-
+// 4. Buscar en la base de datos
 $stmt = $pdo->prepare("SELECT url FROM urls WHERE slug = ?");
-$stmt->execute([$path]);
+$stmt->execute([$slug]);
 
 if ($row = $stmt->fetch()) {
+    // 5. Redirigir si existe
     header("Location: " . $row['url']);
     exit;
 } else {
+    // 6. Mostrar error si no existe
     http_response_code(404);
     echo "404 - URL no encontrada";
 }
