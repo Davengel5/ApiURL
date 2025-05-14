@@ -3,6 +3,15 @@
 // 1. Conectamos a la base de datos
 	$pdo = new PDO('mysql:host=mysql.railway.internal;dbname=railway;charset=utf8mb4', 'root', 'fvnJSMGrEiLaBGmOKQdhpAQgamPtRVat');
 	$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+
+	echo "<pre>";
+echo "REQUEST_URI: " . ($_SERVER['REQUEST_URI'] ?? 'NULL') . "\n";
+echo "PATH: " . ($path ?? 'NULL') . "\n";
+echo "HTTP_HOST: " . ($_SERVER['HTTP_HOST'] ?? 'NULL') . "\n";
+echo "SCRIPT_NAME: " . ($_SERVER['SCRIPT_NAME'] ?? 'NULL') . "\n";
+echo "</pre>";
+exit;
 // 2. Obtenemos el slug que está en la URL
 	//$slug = ltrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/'); 
 
