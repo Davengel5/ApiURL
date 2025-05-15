@@ -9,22 +9,22 @@ $data = json_decode(file_get_contents("php://input"), true);
 $email = $data['email'] ?? '';
 
 try {
-    // Verificar si el usuario es premium (ya sea en usuarios o en historial)
-    $stmt = $pdo->prepare("SELECT u.intentos, u.tipo, 
-                          (SELECT COUNT(*) FROM premium_historial WHERE user_email = u.email) as upgrades
-                          FROM usuarios u WHERE u.email = ?");
+    $stmt = $pdo->prepare("SELECT intentos, tipo FROM usuarios WHERE email = ?");
     $stmt->execute([$email]);
     $user = $stmt->fetch();
 
     if ($user) {
-        // Si tiene upgrades registrados o tipo Premium
-        $isPremium = $user['tipo'] === 'Premium' || $user['upgrades'] > 0;
+        $isPremium = $user['tipo'] === 'Premium';
         
         echo json_encode([
             'attempts' => $isPremium ? PHP_INT_MAX : $user['intentos'],
             'is_premium' => $isPremium
         ]);
     } else {
+        // Usuario no existe, crear uno nuevo (free por defecto)
+        $stmt = $pdo->prepare("INSERT INTO usuarios (email, nombre, tipo, intentos) VALUES (?, ?, 'Free', 5)");
+        $stmt->execute([$email, explode('@', $email)[0]]);
+        
         echo json_encode([
             'attempts' => 5,
             'is_premium' => false

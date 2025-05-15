@@ -14,25 +14,16 @@ if (empty($email)) {
 }
 
 try {
-    // Actualizar a Premium y guardar en tabla de historial
-    $pdo->beginTransaction();
-    
+    // Actualizar a Premium permanentemente
     $stmt = $pdo->prepare("UPDATE usuarios SET tipo = 'Premium', fecha_upgrade = NOW() WHERE email = ?");
     $stmt->execute([$email]);
     
-    // Registrar en historial de upgrades
-    $stmt = $pdo->prepare("INSERT INTO premium_historial (user_email, fecha) VALUES (?, NOW())");
-    $stmt->execute([$email]);
-    
-    $pdo->commit();
-    
     echo json_encode([
         "success" => true,
-        "message" => "Usuario actualizado a Premium permanentemente"
+        "message" => "Usuario actualizado a Premium"
     ]);
     
 } catch (PDOException $e) {
-    $pdo->rollBack();
     echo json_encode(["success" => false, "error" => $e->getMessage()]);
 }
 ?>
