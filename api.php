@@ -4,12 +4,15 @@ header("Access-Control-Allow-Origin: *");
 
 $pdo = new PDO('mysql:host=mysql.railway.internal;dbname=railway;charset=utf8mb4', 'root', 'fvnJSMGrEiLaBGmOKQdhpAQgamPtRVat');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
 $method = $_SERVER['REQUEST_METHOD'];
-//Ya completa la funcionalidad creo
+
 if ($method === 'POST') {
     $data = json_decode(file_get_contents("php://input"), true);
     
-    // Validación básica de URL
+    // Debug: Registrar datos recibidos
+    error_log("Datos recibidos: " . print_r($data, true));
+
     if (empty($data['url'])) {
         http_response_code(400);
         echo json_encode(['error' => 'URL requerida']);
@@ -17,72 +20,59 @@ if ($method === 'POST') {
     }
 
     $url = $data['url'];
-    $userId = $data['user_id'] ?? 'anonimo'; // Acepta cualquier identificador
-    
-    if ($userId !== 'anonimo') {
-    $stmt = $pdo->prepare("SELECT intentos FROM usuarios WHERE email = ?");
-    $stmt->execute([$userId]);
-    $user = $stmt->fetch();
-    
-    if (!$user || $user['intentos'] <= 0) {
-        http_response_code(403);
-        echo json_encode(['error' => 'No tienes intentos disponibles']);
-        exit;
-    }
-}
-    // Generar slug
-    $slug = substr(md5(uniqid(rand(), true)), 0, 6);
+    $userEmail = $data['user_id'] ?? 'anonimo';
 
     try {
-        // Insertar en base de datos
+        // Verificar/crear usuario
+        $stmt = $pdo->prepare("SELECT id, intentos, tipo FROM usuarios WHERE email = ?");
+        $stmt->execute([$userEmail]);
+        $user = $stmt->fetch();
+
+        if (!$user && $userEmail !== 'anonimo') {
+            // Crear nuevo usuario
+            $stmt = $pdo->prepare("INSERT INTO usuarios (email, nombre, tipo, intentos) VALUES (?, ?, 'Free', 5)");
+            $stmt->execute([$userEmail, explode('@', $userEmail)[0]]);
+            $user = ['intentos' => 5, 'tipo' => 'Free'];
+        }
+
+        // Verificar intentos para usuarios no premium
+        if ($userEmail !== 'anonimo' && $user['tipo'] !== 'Premium' && $user['intentos'] <= 0) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Límite de intentos alcanzado']);
+            exit;
+        }
+
+        // Crear URL
+        $slug = substr(md5(uniqid(rand(), true)), 0, 6);
         $stmt = $pdo->prepare("INSERT INTO urls (slug, url, user_id) VALUES (?, ?, ?)");
-        $stmt->execute([$slug, $url, $userId]);
+        $stmt->execute([$slug, $url, $userEmail]);
 
-        //Reducir intentos
-        if ($userId !== 'anonimo') {
+        // Reducir intentos si no es premium
+        if ($userEmail !== 'anonimo' && $user['tipo'] !== 'Premium') {
             $stmt = $pdo->prepare("UPDATE usuarios SET intentos = intentos - 1 WHERE email = ?");
-            $stmt->execute([$userId]);
-            
-            // Opcional: Obtener intentos restantes para la respuesta
-            $stmt = $pdo->prepare("SELECT intentos FROM usuarios WHERE email = ?");
-            $stmt->execute([$userId]);
-            $remainingAttempts = $stmt->fetch()['intentos'];
-}
-
+            $stmt->execute([$userEmail]);
+            $remainingAttempts = $user['intentos'] - 1;
+        } else {
+            $remainingAttempts = $user['intentos'] ?? 0;
+        }
 
         // Construir respuesta
         $host = $_SERVER['HTTP_HOST'];
         $path = rtrim(dirname($_SERVER['PHP_SELF']), '/');
-        $shortUrl = "http://$host$path/$slug";
+        $shortUrl = "https://$host$path/$slug";
 
         echo json_encode([
             'success' => true,
-            'slug' => $slug,
-            'url' => $url,
             'short_url' => $shortUrl,
-            'user_id' => $userId,
-            'message' => 'URL creada exitosamente',
-            'remaining_attempts' => $userId !== 'anonimo' ? $remainingAttempts : null
+            'remaining_attempts' => $remainingAttempts,
+            'is_premium' => ($user['tipo'] ?? 'Free') === 'Premium',
+            'message' => 'URL creada exitosamente'
         ]);
 
     } catch (PDOException $e) {
+        error_log("Error en BD: " . $e->getMessage());
         http_response_code(500);
-        echo json_encode(['error' => 'Error en base de datos: ' . $e->getMessage()]);
-    }
-
-} elseif ($method === 'GET') {
-    // Endpoint original para redirección
-    $slug = $_GET['slug'] ?? '';
-    
-    $stmt = $pdo->prepare("SELECT url FROM urls WHERE slug = ?");
-    $stmt->execute([$slug]);
-    $resultado = $stmt->fetch();
-
-    if ($resultado) {
-        echo json_encode(["slug" => $slug, "url" => $resultado['url']]);
-    } else {
-        http_response_code(404);
-        echo json_encode(['error' => 'Slug no encontrado']);
+        echo json_encode(['error' => 'Error en base de datos']);
     }
 } else {
     http_response_code(405);
