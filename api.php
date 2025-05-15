@@ -19,6 +19,17 @@ if ($method === 'POST') {
     $url = $data['url'];
     $userId = $data['user_id'] ?? 'anonimo'; // Acepta cualquier identificador
     
+    if ($userId !== 'anonimo') {
+    $stmt = $pdo->prepare("SELECT intentos FROM usuarios WHERE email = ?");
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch();
+    
+    if (!$user || $user['intentos'] <= 0) {
+        http_response_code(403);
+        echo json_encode(['error' => 'No tienes intentos disponibles']);
+        exit;
+    }
+}
     // Generar slug
     $slug = substr(md5(uniqid(rand(), true)), 0, 6);
 
@@ -26,6 +37,18 @@ if ($method === 'POST') {
         // Insertar en base de datos
         $stmt = $pdo->prepare("INSERT INTO urls (slug, url, user_id) VALUES (?, ?, ?)");
         $stmt->execute([$slug, $url, $userId]);
+
+        //Reducir intentos
+        if ($userId !== 'anonimo') {
+            $stmt = $pdo->prepare("UPDATE usuarios SET intentos = intentos - 1 WHERE email = ?");
+            $stmt->execute([$userId]);
+            
+            // Opcional: Obtener intentos restantes para la respuesta
+            $stmt = $pdo->prepare("SELECT intentos FROM usuarios WHERE email = ?");
+            $stmt->execute([$userId]);
+            $remainingAttempts = $stmt->fetch()['intentos'];
+}
+
 
         // Construir respuesta
         $host = $_SERVER['HTTP_HOST'];
@@ -38,7 +61,8 @@ if ($method === 'POST') {
             'url' => $url,
             'short_url' => $shortUrl,
             'user_id' => $userId,
-            'message' => 'URL creada exitosamente'
+            'message' => 'URL creada exitosamente',
+            'remaining_attempts' => $userId !== 'anonimo' ? $remainingAttempts : null
         ]);
 
     } catch (PDOException $e) {
