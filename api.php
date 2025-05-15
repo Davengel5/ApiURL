@@ -33,10 +33,12 @@ if ($method === 'POST') {
         $shortUrl = "http://$host$path/$slug";
 
         echo json_encode([
+            'success' => true,
             'slug' => $slug,
             'url' => $url,
             'short_url' => $shortUrl,
-            'user_id' => $userId
+            'user_id' => $userId,
+            'message' => 'URL creada exitosamente'
         ]);
 
     } catch (PDOException $e) {
