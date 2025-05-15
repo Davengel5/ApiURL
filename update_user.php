@@ -15,7 +15,7 @@ if (empty($email)) {
 
 try {
     // Actualizar a Premium permanentemente
-    $stmt = $pdo->prepare("UPDATE usuarios SET tipo = 'Premium', fecha_upgrade = NOW() WHERE email = ?");
+    $stmt = $pdo->prepare("UPDATE usuarios SET tipo = 'Premium' WHERE email = ?");
     $stmt->execute([$email]);
     
     echo json_encode([
