@@ -6,15 +6,20 @@ $pdo = new PDO('mysql:host=mysql.railway.internal;dbname=railway;charset=utf8mb4
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
 $data = json_decode(file_get_contents("php://input"), true);
-$userId = $data['user_id'] ?? 0;
+$email = $data['email'] ?? '';
 
-$stmt = $pdo->prepare("SELECT intentos FROM usuarios WHERE id = ?");
-$stmt->execute([$userId]);
+if (empty($email)) {
+    echo json_encode(["error" => "Email requerido"]);
+    exit;
+}
+
+$stmt = $pdo->prepare("SELECT intentos FROM usuarios WHERE email = ?");
+$stmt->execute([$email]);
 $result = $stmt->fetch();
 
 if ($result) {
     echo json_encode(["attempts" => $result['intentos']]);
 } else {
-    echo json_encode(["error" => "Usuario no encontrado"]);
+    echo json_encode(["attempts" => 0]); // O crear el usuario si no existe
 }
 ?>
