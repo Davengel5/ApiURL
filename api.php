@@ -5,7 +5,7 @@ header("Access-Control-Allow-Origin: *");
 $pdo = new PDO('mysql:host=mysql.railway.internal;dbname=railway;charset=utf8mb4', 'root', 'fvnJSMGrEiLaBGmOKQdhpAQgamPtRVat');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $method = $_SERVER['REQUEST_METHOD'];
-
+//Ya completa la funcionalidad creo
 if ($method === 'POST') {
     $data = json_decode(file_get_contents("php://input"), true);
     
