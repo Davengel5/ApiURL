@@ -9,7 +9,7 @@ $data = json_decode(file_get_contents("php://input"), true);
 $email = $data['email'] ?? '';
 
 try {
-    $stmt = $pdo->prepare("SELECT intentos, tipo FROM usuarios WHERE email = ?");
+    $stmt = $pdo->prepare("SELECT tipo, intentos FROM usuarios WHERE email = ?");
     $stmt->execute([$email]);
     $user = $stmt->fetch();
 
@@ -21,16 +21,17 @@ try {
             'is_premium' => $isPremium
         ]);
     } else {
-        // Usuario no existe, crear uno nuevo (free por defecto)
-        $stmt = $pdo->prepare("INSERT INTO usuarios (email, nombre, tipo, intentos) VALUES (?, ?, 'Free', 5)");
-        $stmt->execute([$email, explode('@', $email)[0]]);
-        
+        // Usuario no existe, devolver valores por defecto
         echo json_encode([
             'attempts' => 5,
             'is_premium' => false
         ]);
     }
 } catch (Exception $e) {
-    echo json_encode(['error' => $e->getMessage()]);
+    echo json_encode([
+        'attempts' => 5,
+        'is_premium' => false,
+        'error' => $e->getMessage()
+    ]);
 }
 ?>
