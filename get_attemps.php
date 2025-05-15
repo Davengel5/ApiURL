@@ -9,33 +9,28 @@ $data = json_decode(file_get_contents("php://input"), true);
 $email = $data['email'] ?? '';
 
 try {
-    if (empty($email)) {
-        throw new Exception("Email requerido");
-    }
-
-    // Verificar si el usuario existe
-    $stmt = $pdo->prepare("SELECT intentos, tipo FROM usuarios WHERE email = ?");
+    // Verificar si el usuario es premium (ya sea en usuarios o en historial)
+    $stmt = $pdo->prepare("SELECT u.intentos, u.tipo, 
+                          (SELECT COUNT(*) FROM premium_historial WHERE user_email = u.email) as upgrades
+                          FROM usuarios u WHERE u.email = ?");
     $stmt->execute([$email]);
     $user = $stmt->fetch();
 
     if ($user) {
-        // Usuario existe - devolver intentos
+        // Si tiene upgrades registrados o tipo Premium
+        $isPremium = $user['tipo'] === 'Premium' || $user['upgrades'] > 0;
+        
         echo json_encode([
-            'attempts' => $user['intentos'],
-            'is_premium' => $user['tipo'] === 'Premium'
+            'attempts' => $isPremium ? PHP_INT_MAX : $user['intentos'],
+            'is_premium' => $isPremium
         ]);
     } else {
-        // Crear nuevo usuario si no existe
-        $stmt = $pdo->prepare("INSERT INTO usuarios (email, nombre, tipo, intentos) VALUES (?, ?, 'Free', 5)");
-        $stmt->execute([$email, explode('@', $email)[0]]);
-        
         echo json_encode([
             'attempts' => 5,
             'is_premium' => false
         ]);
     }
 } catch (Exception $e) {
-    http_response_code(400);
     echo json_encode(['error' => $e->getMessage()]);
 }
 ?>
