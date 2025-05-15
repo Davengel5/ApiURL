@@ -14,26 +14,25 @@ if (empty($email)) {
 }
 
 try {
-    // Buscar usuario existente
     $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE email = ?");
     $stmt->execute([$email]);
     $user = $stmt->fetch();
 
     if ($user) {
-        echo json_encode(["success" => true, "id" => $user['id']]);
+        // Usuario existe - devolver ID
+        echo json_encode(["id" => $user['id']]);
     } else {
-        // Crear nuevo usuario si no existe
-        $name = explode('@', $email)[0]; // Extraer nombre del email
+        // Crear nuevo usuario
+        $name = explode('@', $email)[0];
         $stmt = $pdo->prepare("INSERT INTO usuarios (email, nombre, intentos) VALUES (?, ?, ?)");
         $stmt->execute([$email, $name, 5]);
         
         echo json_encode([
-            "success" => true,
             "id" => $pdo->lastInsertId(),
             "message" => "Nuevo usuario creado"
         ]);
     }
 } catch (PDOException $e) {
-    echo json_encode(["success" => false, "error" => $e->getMessage()]);
+    echo json_encode(["error" => $e->getMessage()]);
 }
 ?>
