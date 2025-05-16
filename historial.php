@@ -15,12 +15,11 @@ if (!$email) {
 }
 
 try {
-    // Obtener historial con paginación básica
     $page = max(1, $data['page'] ?? 1);
     $perPage = 10;
     $offset = ($page - 1) * $perPage;
 
-    // Consulta para obtener URLs
+    // Consulta modificada para usar parámetros enteros correctamente
     $stmt = $pdo->prepare("
         SELECT slug, url, created_at 
         FROM urls 
@@ -28,10 +27,15 @@ try {
         ORDER BY created_at DESC 
         LIMIT ? OFFSET ?
     ");
-    $stmt->execute([$email, $perPage, $offset]);
+    
+    // Conversión explícita a integers
+    $stmt->bindValue(1, $email);
+    $stmt->bindValue(2, (int)$perPage, PDO::PARAM_INT);
+    $stmt->bindValue(3, (int)$offset, PDO::PARAM_INT);
+    $stmt->execute();
+    
     $urls = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Consulta para contar total
     $countStmt = $pdo->prepare("SELECT COUNT(*) as total FROM urls WHERE user_id = ?");
     $countStmt->execute([$email]);
     $total = $countStmt->fetch()['total'];
