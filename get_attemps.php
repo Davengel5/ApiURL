@@ -11,27 +11,27 @@ $email = $data['email'] ?? '';
 try {
     $stmt = $pdo->prepare("SELECT tipo, intentos FROM usuarios WHERE email = ?");
     $stmt->execute([$email]);
-    $user = $stmt->fetch();
-
-    if ($user) {
+    
+    if ($user = $stmt->fetch()) {
         $isPremium = $user['tipo'] === 'Premium';
         
+        // Forzar consistencia - si es premium, intentos = ilimitados
         echo json_encode([
             'attempts' => $isPremium ? PHP_INT_MAX : $user['intentos'],
-            'is_premium' => $isPremium
+            'is_premium' => $isPremium,
+            'consistent' => true
         ]);
     } else {
-        // Usuario no existe, devolver valores por defecto
         echo json_encode([
             'attempts' => 5,
-            'is_premium' => false
+            'is_premium' => false,
+            'consistent' => false
         ]);
     }
 } catch (Exception $e) {
     echo json_encode([
-        'attempts' => 5,
-        'is_premium' => false,
-        'error' => $e->getMessage()
+        'error' => $e->getMessage(),
+        'consistent' => false
     ]);
 }
 ?>
