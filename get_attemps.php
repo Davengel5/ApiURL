@@ -14,24 +14,19 @@ try {
     
     if ($user = $stmt->fetch()) {
         $isPremium = $user['tipo'] === 'Premium';
-        
-        // Forzar consistencia - si es premium, intentos = ilimitados
         echo json_encode([
             'attempts' => $isPremium ? PHP_INT_MAX : $user['intentos'],
-            'is_premium' => $isPremium,
-            'consistent' => true
+            'is_premium' => $isPremium
         ]);
     } else {
         echo json_encode([
-            'attempts' => 5,
-            'is_premium' => false,
-            'consistent' => false
+            'attempts' => 0,
+            'is_premium' => false
         ]);
     }
 } catch (Exception $e) {
     echo json_encode([
-        'error' => $e->getMessage(),
-        'consistent' => false
+        'error' => $e->getMessage()
     ]);
 }
 ?>
