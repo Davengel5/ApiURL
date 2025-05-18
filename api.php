@@ -10,7 +10,6 @@ $method = $_SERVER['REQUEST_METHOD'];
 if ($method === 'POST') {
     $data = json_decode(file_get_contents("php://input"), true);
     
-    // Debug: Registrar datos recibidos
     error_log("Datos recibidos: " . print_r($data, true));
 
     if (empty($data['url'])) {
