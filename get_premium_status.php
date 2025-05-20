@@ -13,12 +13,10 @@ try {
     $stmt->execute([$email]);
     $user = $stmt->fetch();
     
-    if ($user) {
-        echo json_encode(["is_premium" => $user['tipo'] === 'Premium']);
-    } else {
-        echo json_encode(["is_premium" => false]);
-    }
+    echo json_encode([
+        "is_premium" => $user ? $user['tipo'] === 'Premium' : false
+    ]);
 } catch (PDOException $e) {
-    echo json_encode(["error" => $e->getMessage()]);
+    echo json_encode(["is_premium" => false]);
 }
 ?>
