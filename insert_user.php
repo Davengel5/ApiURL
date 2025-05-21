@@ -13,7 +13,6 @@ if ($method === 'POST') {
     $json = file_get_contents('php://input');
     $data = json_decode($json, true);
 
-    // Validar campos requeridos
     $required = ['nombre', 'email', 'tipo', 'intentos'];
     $missing = [];
     foreach ($required as $field) {
@@ -31,7 +30,6 @@ if ($method === 'POST') {
         exit;
     }
 
-    // Asignar valores
     $nombre = $data['nombre'];
     $email = $data['email'];
     $tipo = $data['tipo'];

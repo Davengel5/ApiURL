@@ -7,7 +7,6 @@ header("Access-Control-Allow-Headers: Content-Type");
 $pdo = new PDO('mysql:host=mysql.railway.internal;dbname=railway;charset=utf8mb4', 'root', 'fvnJSMGrEiLaBGmOKQdhpAQgamPtRVat');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-// Manejar solicitudes DELETE para eliminar URLs
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     $data = json_decode(file_get_contents("php://input"), true);
     $slug = $data['slug'] ?? '';
@@ -20,7 +19,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     }
 
     try {
-        // Verificar que la URL pertenece al usuario antes de eliminar
         $stmt = $pdo->prepare("DELETE FROM urls WHERE slug = ? AND user_id = ?");
         $stmt->execute([$slug, $email]);
         
@@ -47,7 +45,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     exit;
 }
 
-// Manejar solicitudes GET/POST para obtener el historial
 $data = json_decode(file_get_contents("php://input"), true);
 $email = $data['email'] ?? '';
 
@@ -62,7 +59,6 @@ try {
     $perPage = 10;
     $offset = ($page - 1) * $perPage;
 
-    // Consulta para obtener las URLs
     $stmt = $pdo->prepare("
         SELECT slug, url, created_at 
         FROM urls 
@@ -78,7 +74,6 @@ try {
     
     $urls = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Consulta para el total
     $countStmt = $pdo->prepare("SELECT COUNT(*) as total FROM urls WHERE user_id = ?");
     $countStmt->execute([$email]);
     $total = $countStmt->fetch()['total'];

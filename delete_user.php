@@ -4,7 +4,6 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: DELETE");
 header("Access-Control-Allow-Headers: Content-Type");
 
-// Asegura que cualquier salida sea JSON
 try {
     $data = json_decode(file_get_contents("php://input"), true);
     if (!$data || empty($data['email'])) {
@@ -16,11 +15,9 @@ try {
 
     $pdo->beginTransaction();
     
-    // Eliminar URLs
     $stmt = $pdo->prepare("DELETE FROM urls WHERE user_id = ?");
     $stmt->execute([$data['email']]);
     
-    // Eliminar usuario
     $stmt = $pdo->prepare("DELETE FROM usuarios WHERE email = ?");
     $stmt->execute([$data['email']]);
     
