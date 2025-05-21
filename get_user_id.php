@@ -19,10 +19,8 @@ try {
     $user = $stmt->fetch();
 
     if ($user) {
-        // Usuario existe - devolver ID
         echo json_encode(["id" => $user['id']]);
     } else {
-        // Crear nuevo usuario
         $name = explode('@', $email)[0];
         $stmt = $pdo->prepare("INSERT INTO usuarios (email, nombre, intentos) VALUES (?, ?, ?)");
         $stmt->execute([$email, $name, 5]);
